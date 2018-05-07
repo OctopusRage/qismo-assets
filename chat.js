@@ -65,76 +65,90 @@ jQuery(document).ready(function () {
         }
 
         function initQiscusWidget(userID, userName, roomName, newUser) {
-            var baseURL = 'https://qismo.qiscus.com',
+            var baseURL = 'https://qismo-stag.herokuapp.com',
                 appId = window.qismoAppId,
                 userId = userID,
                 avatar = 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png',
+                identityToken = '',
                 formChatContainer = jQuery('.qcw-cs-container')
 
-            // Initiate Room
-            var initRoom = jQuery.post(`${baseURL}/api/v1/qiscus/initiate_chat`,
-                {
-                    'app_id': appId,
-                    'user_id': userId,
-                    'name': roomName,
-                    'avatar': avatar
-                }
-            );
-
-            initRoom.done(function (data) {
+  
+            QiscusSDK.core.init({
+              AppId: appId,
+            })
+              
+            QiscusSDK.core.getNonce().then(res => {
+              //   Initiate Room
+              var initRoom = jQuery.post(`${baseURL}/api/v1/qiscus/initiate_chat`,
+                  {
+                      'app_id': appId,
+                      'user_id': userId,
+                      'name': roomName,
+                      'avatar': avatar,
+                      'nonce': res.nonce
+                  }
+              );
+  
+              initRoom.done(function (data) {
                 formChatContainer.removeClass('--open')
                 formChatContainer.remove()
-                
-                window.roomId = data.data.room_id
-                var password = data.data.sdk_user.password,
-                    sdkEmail = data.data.sdk_user.email
-
-                if (newUser) {
-                    QiscusSDK.core.init({
-                        AppId: appId,
-                        options: {
-                            loginSuccessCallback: function (userData) {
-                                QiscusSDK.core.UI.chatGroup(window.roomId)
-                            },
-                            roomChangedCallback(data) {
-                                qiscus.selected.name = window.CustomerServiceName || "Customer Service"
-                                qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
-                            },
-                            newMessagesCallback(data) {
-                                showNotif(data);
-                                // scrolling to bottom
-                                setTimeout(function () {
-                                    lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
-                                    theElement = document.getElementById(lastCommentId);
-                                    theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
-                                }, 200);
-                            }
-                        }
-                    })
-                } else {
-                    QiscusSDK.core.init({
-                        AppId: appId,
-                        options: {
-                            roomChangedCallback(data) {
-                                qiscus.selected.name = window.CustomerServiceName || "Customer Service"
-                                qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
-                            },
-                            newMessagesCallback(data) {
-                                showNotif(data);
-                                setTimeout(function () {
-                                    lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
-                                    theElement = document.getElementById(lastCommentId);
-                                    theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
-                                }, 200);
-                            }
-                        }
-                    })
-                }
-
-                QiscusSDK.core.setUser(sdkEmail, password, userName)
-                QiscusSDK.render()
-                QiscusSDK.core.UI.widgetButtonText = window.qismoWidgetButtonText
+                  
+                  window.roomId = data.data.room_id
+              
+                  identityToken = data.data.identity_token
+                  var sdkEmail = userId
+  
+                  if (newUser) {
+                      QiscusSDK.core.init({
+                          AppId: appId,
+                          options: {
+                              loginSuccessCallback: function (userData) {
+                                  QiscusSDK.core.UI.chatGroup(window.roomId)
+                              },
+                              roomChangedCallback(data) {
+                                  qiscus.selected.name = window.CustomerServiceName || "Customer Service"
+                                  qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
+                              },
+                              newMessagesCallback(data) {
+                                  showNotif(data);
+                                  // scrolling to bottom
+                                  setTimeout(function () {
+                                      lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
+                                      theElement = document.getElementById(lastCommentId);
+                                      theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
+                                  }, 200);
+                              }
+                          }
+                      })
+                  } else {
+                      QiscusSDK.core.init({
+                          AppId: appId,
+                          options: {
+                              roomChangedCallback(data) {
+                                  qiscus.selected.name = window.CustomerServiceName || "Customer Service"
+                                  qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
+                              },
+                              newMessagesCallback(data) {
+                                  showNotif(data);
+                                  setTimeout(function () {
+                                      lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
+                                      theElement = document.getElementById(lastCommentId);
+                                      theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
+                                  }, 200);
+                              }
+                          }
+                      })
+                  }
+  
+                  QiscusSDK.core.verifyIdentityToken(identityToken).then(verifyResponse => {
+                      QiscusSDK.core.setUserWithIdentityToken(verifyResponse);
+                  })
+  
+                  QiscusSDK.render()
+                  QiscusSDK.core.UI.widgetButtonText = window.qismoWidgetButtonText
+              });
             });
+            console.log()        
         }
     });
     jQuery(function () {
