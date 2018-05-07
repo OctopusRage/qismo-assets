@@ -1,177 +1,105 @@
 jQuery(document).ready(function () {
     if (Notification.permission !== "granted") Notification.requestPermission();
-    var isMinimized = true;
+    var isMinimized = true,
+        ls = JSON.parse(localStorage.getItem('qismo-data'));
 
-    jQuery(document).ready(function () {
-        // initial chats
-        var userID = null,
-            userName = null,
-            newUser = false,
-            ls = JSON.parse(localStorage.getItem('qismo-data'))
+    /**
+     * So there's 2 version, local storage based data
+     * and global var based data (don't need regist form)
+     * we'll check this client used which one first
+     */
 
-        if (ls === null && userID === null) {
-            var chatForm = jQuery('<div class="qcw-cs-container">'+
-                '<div class="qcw-cs-wrapper">' +
-                    '<span class="qcw-cs-close">&#x268A;</span>' +
-                    '<div class="qcw-cs-box-form">' +
-                        '<h3>Hey, welcome to Qiscus!</h3>' +
-                        '<p>Please fill the details below before chatting with us</p>' +
-                        '<form>' +
-                            '<div class="qcw-cs-form-group">' +
-                            '<input type="name" name="name" class="qcw-cs-form-field" id="inputname" placeholder="Name">' +
-                            '</div>' +
-                            '<div class="qcw-cs-form-group">' +
-                            '<input type="email" name="email" class="qcw-cs-form-field" id="inputEmail" placeholder="Email">' +
-                            '</div>' +
-                            '<div class="qcw-cs-form-group">' +
-                            '<button name="submitform" type="submit" class="qcw-cs-submit-form">Submit</button>' +
-                            '</div>' +
-                        '</form>' +
-                    '</div>' +
-                '</div>' +
-                '<button type="button" class="qcw-cs-trigger-button">Talk To Us</button>' +
-                '</div>')
-            chatForm.prependTo('body')
-
-            jQuery('.qcw-cs-wrapper form').on('submit', function (e) {
-                e.preventDefault();
-                var _self = jQuery(this),
-                    submitBtn = jQuery('button[name="submitform"]'),
-                    randomKey = Date.now(),
-                    userData = {
-                        user_id: jQuery('#inputEmail').val(),
-                        user_name: jQuery('#inputname').val()
-                    }
-
-                if (!userData.user_id || !userData.user_name) {
-                    if (jQuery('.qcw-cs-form-group.error').length === 0) {
-                        jQuery('<div class="qcw-cs-form-group error"><span>All fields are required!</span></div>').prependTo(_self);
-                    }
-                    return
-                } else {
-                    jQuery('.qcw-cs-form-group.error').remove();
-                }
-                submitBtn.attr('type', 'button')
-                submitBtn.prop('disabled', '')
-                submitBtn.html('Loading...')
-                newUser = true
-                localStorage.setItem('qismo-data', JSON.stringify(userData))
-                initQiscusWidget(userData.user_id, userData.user_name, userData.user_name, newUser)
-            })
+    var isRegistrationFormNeeded = window.userId ? false : true;
+    if(isRegistrationFormNeeded) {
+        // registration code here
+        if(ls === null) {
+            attachLoginFormToDOM();
         } else {
-            userID = ls.user_id
-            userName = ls.user_name
-            initQiscusWidget(userID, userName, userName, newUser)
+            // local storage data available, let's login
+            initQiscusWidget(ls);
+        }
+    } else {
+        // initiate using global vars, login directly
+        initQiscusWidget();
+    }
+
+    function initQiscusWidget(userData) {
+        var baseURL = 'https://qismo.qiscus.com',
+            appId = window.qismoAppId,
+            userId = window.userId,
+            userName = window.userName,
+            avatar = 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png';
+
+        if(userData) {
+            userId = userData.user_id;
+            userName = userData.user_name;
         }
 
-        function initQiscusWidget(userID, userName, roomName, newUser) {
-            var baseURL = 'https://qismo-stag.herokuapp.com',
-                appId = window.qismoAppId,
-                userId = userID,
-                avatar = 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png',
-                identityToken = '',
-                formChatContainer = jQuery('.qcw-cs-container')
+        // Initiate Room
+        var initRoom = jQuery.post(`${baseURL}/api/v1/qiscus/initiate_chat`,
+            {
+                'app_id': appId,
+                'user_id': userId,
+                'name': userName,
+                'avatar': avatar,
+            }
+        );
 
-  
+        initRoom.done(function (data) {
+            jQuery('.cs-chat-container').removeClass('--open')
+            jQuery('.cs-chat-container').remove()
+
+            window.roomId = data.data.room_id
+            var password = data.data.sdk_user.password,
+                sdkEmail = data.data.sdk_user.email
+
             QiscusSDK.core.init({
-              AppId: appId,
+                AppId: appId,
+                options: {
+                    loginSuccessCallback: function (userData) {
+                        QiscusSDK.core.UI.chatGroup(window.roomId)
+                    },
+                    roomChangedCallback(data) {
+                        qiscus.selected.name = window.CustomerServiceName || "Customer Service"
+                        qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
+                    },
+                    newMessagesCallback(data) {
+                        showNotif(data);
+                        // scrolling to bottom
+                        setTimeout(function () {
+                            lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
+                            theElement = document.getElementById(lastCommentId);
+                            theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
+                        }, 200);
+                    }
+                }
             })
-              
-            QiscusSDK.core.getNonce().then(res => {
-              //   Initiate Room
-              var initRoom = jQuery.post(`${baseURL}/api/v1/qiscus/initiate_chat`,
-                  {
-                      'app_id': appId,
-                      'user_id': userId,
-                      'name': roomName,
-                      'avatar': avatar,
-                      'nonce': res.nonce
-                  }
-              );
-  
-              initRoom.done(function (data) {
-                formChatContainer.removeClass('--open')
-                formChatContainer.remove()
-                  
-                  window.roomId = data.data.room_id
-              
-                  identityToken = data.data.identity_token
-                  var sdkEmail = userId
-  
-                  if (newUser) {
-                      QiscusSDK.core.init({
-                          AppId: appId,
-                          options: {
-                              loginSuccessCallback: function (userData) {
-                                  QiscusSDK.core.UI.chatGroup(window.roomId)
-                              },
-                              roomChangedCallback(data) {
-                                  qiscus.selected.name = window.CustomerServiceName || "Customer Service"
-                                  qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
-                              },
-                              newMessagesCallback(data) {
-                                  showNotif(data);
-                                  // scrolling to bottom
-                                  setTimeout(function () {
-                                      lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
-                                      theElement = document.getElementById(lastCommentId);
-                                      theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
-                                  }, 200);
-                              }
-                          }
-                      })
-                  } else {
-                      QiscusSDK.core.init({
-                          AppId: appId,
-                          options: {
-                              roomChangedCallback(data) {
-                                  qiscus.selected.name = window.CustomerServiceName || "Customer Service"
-                                  qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
-                              },
-                              newMessagesCallback(data) {
-                                  showNotif(data);
-                                  setTimeout(function () {
-                                      lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
-                                      theElement = document.getElementById(lastCommentId);
-                                      theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
-                                  }, 200);
-                              }
-                          }
-                      })
-                  }
-  
-                  QiscusSDK.core.verifyIdentityToken(identityToken).then(verifyResponse => {
-                      QiscusSDK.core.setUserWithIdentityToken(verifyResponse);
-                  })
-  
-                  QiscusSDK.render()
-                  QiscusSDK.core.UI.widgetButtonText = window.qismoWidgetButtonText
-              });
-            });
-            console.log()        
-        }
-    });
+
+            QiscusSDK.core.setUser(sdkEmail, password, userName, 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png')
+            QiscusSDK.render()
+            QiscusSDK.core.UI.widgetButtonText = window.qismoWidgetButtonText
+        });
+    }
     jQuery(function () {
         // button form live chat
-        var formChatContainer = jQuery('.qcw-cs-container');
         if (screen.width > 768) {
-            jQuery('body').on('click', '.qcw-cs-trigger-button, .qcw-cs-close', function () {
+            jQuery('body').on('click', '.cs-trigger-button, .cs-close-chat', function () {
                 if (jQuery('.--open').length > 0) {
-                    formChatContainer.removeClass('--open')
+                    jQuery('.cs-chat-container').removeClass('--open')
                 } else {
-                    formChatContainer.addClass('--open')
+                    jQuery('.cs-chat-container').addClass('--open')
                 }
             })
         } else {
-            jQuery('body').on('click', '.qcw-cs-trigger-button, .qcw-cs-close', function () {
+            jQuery('body').on('click', '.cs-trigger-button, .cs-close-chat', function () {
                 if (jQuery('.--open').length > 0) {
-                    formChatContainer.removeClass('--open')
+                    jQuery('.cs-chat-container').removeClass('--open')
                     jQuery('body').removeClass('--modalOpen')
                     document.ontouchmove = function (event) {
 
                     }
                 } else {
-                    formChatContainer.addClass('--open')
+                    jQuery('.cs-chat-container').addClass('--open')
                     jQuery('body').addClass('--modalOpen')
                     document.ontouchmove = function (event) {
                         event.preventDefault();
@@ -205,5 +133,56 @@ jQuery(document).ready(function () {
             notif.close();
             window.focus();
         }
+    }
+    function attachLoginFormToDOM() {
+        var chatForm = jQuery('<div class="cs-chat-container">' +
+            '<div class="cs-chat-wrapper">' +
+            '<span class="cs-close-chat">&#x268A;</span>' +
+            '<div class="box-form">' +
+            '<h3>' + window.qismoWelcomeText + '</h3>' +
+            '<p>Please fill the details below before chatting with us</p>' +
+            '<form>' +
+            '<div class="form-group">' +
+            '<input type="name" name="name" class="form-field" id="inputname" placeholder="Name">' +
+            '</div>' +
+            '<div class="form-group">' +
+            '<input type="email" name="email" class="form-field" id="inputEmail" placeholder="Email">' +
+            '</div>' +
+            '<div class="form-group">' +
+            '<button name="submitform" type="submit" class="cs-submit-form">Submit</button>' +
+            '</div>' +
+            '</form>' +
+            '</div>' +
+            '</div>' +
+            '<button type="button" class="cs-trigger-button">Talk To Us</button>' +
+            '</div>')
+        chatForm.prependTo('body');
+
+        jQuery('.cs-chat-wrapper form').on('submit', function (e) {
+            e.preventDefault();
+            var _self = jQuery(this),
+                submitBtn = jQuery('button[name="submitform"]'),
+                randomKey = Date.now(),
+                userData = {
+                    user_id: jQuery('#inputEmail').val(),
+                    user_name: jQuery('#inputname').val()
+                }
+
+            if (!userData.user_id || !userData.user_name) {
+                if (jQuery('.form-group.error').length === 0) {
+                    jQuery('<div class="form-group error"><span>All fields are required!</span></div>').prependTo(_self);
+                }
+                return
+            } else {
+                jQuery('.form-group.error').remove();
+            }
+            submitBtn.attr('type', 'button')
+            submitBtn.prop('disabled', '')
+            submitBtn.html('Loading...')
+            newUser = true
+            localStorage.setItem('qismo-data', JSON.stringify(userData))
+            // initQiscusWidget(userData.user_id, userData.user_name, userData.user_name, newUser)
+            initQiscusWidget(userData);
+        });
     }
 });
