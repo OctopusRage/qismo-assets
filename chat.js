@@ -23,6 +23,24 @@ jQuery(document).ready(function () {
         initQiscusWidget();
     }
 
+    const defaultInitOptions = {
+        loginSuccessCallback: function (userData) {
+            QiscusSDK.core.UI.chatGroup(window.roomId)
+        },
+        roomChangedCallback(data) {
+            qiscus.selected.name = window.CustomerServiceName || "Customer Service"
+            qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
+        },
+        newMessagesCallback(data) {
+            showNotif(data);
+            // scrolling to bottom
+            setTimeout(function () {
+                lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
+                theElement = document.getElementById(lastCommentId);
+                theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
+            }, 200);
+        }
+    }
     function initQiscusWidget(userData) {
         var baseURL = 'https://qismo.qiscus.com',
             appId = window.qismoAppId,
@@ -55,24 +73,9 @@ jQuery(document).ready(function () {
 
             QiscusSDK.core.init({
                 AppId: appId,
-                options: {
-                    loginSuccessCallback: function (userData) {
-                        QiscusSDK.core.UI.chatGroup(window.roomId)
-                    },
-                    roomChangedCallback(data) {
-                        qiscus.selected.name = window.CustomerServiceName || "Customer Service"
-                        qiscus.selected.avatar = window.CustomerServiceAvatar || "https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/q5sred_vy0/1516689209-ic_qiscus_user.png"
-                    },
-                    newMessagesCallback(data) {
-                        showNotif(data);
-                        // scrolling to bottom
-                        setTimeout(function () {
-                            lastCommentId = QiscusSDK.core.selected.comments[QiscusSDK.core.selected.comments.length - 1].id;
-                            theElement = document.getElementById(lastCommentId);
-                            theElement.scrollIntoView({ block: 'end', behaviour: 'smooth' })
-                        }, 200);
-                    }
-                }
+                options: window.qiscusInitOptions
+                    ? Object.assign({}, defaultInitOptions, window.qiscusInitOptions)
+                    : defaultInitOptions,
             })
 
             QiscusSDK.core.setUser(sdkEmail, password, userName, 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png')
