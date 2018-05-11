@@ -42,7 +42,7 @@ jQuery(document).ready(function () {
         }
     }
     function initQiscusWidget(userData) {
-        var baseURL = 'https://qismo.qiscus.com',
+        var baseURL = 'https://qismo.herokuapp.com',
             appId = window.qismoAppId,
             userId = window.userId,
             userName = window.userName,
@@ -53,34 +53,39 @@ jQuery(document).ready(function () {
             userName = userData.user_name;
         }
 
-        // Initiate Room
-        var initRoom = jQuery.post(`${baseURL}/api/v1/qiscus/initiate_chat`,
-            {
-                'app_id': appId,
-                'user_id': userId,
-                'name': userName,
-                'avatar': avatar,
-            }
-        );
+        QiscusSDK.core.init({
+            AppId: appId,
+        })
+        QiscusSDK.core.getNonce().then(res => {
+            // Initiate Room
+            var initRoom = jQuery.post(`${baseURL}/api/v1/qiscus/initiate_chat`,
+                {
+                    'app_id': appId,
+                    'user_id': userId,
+                    'name': userName,
+                    'avatar': avatar,
+                    'nonce': res.nonce
+                }
+            );
+            initRoom.done(function (data) {
+                jQuery('.cs-chat-container').removeClass('--open')
+                jQuery('.cs-chat-container').remove()
 
-        initRoom.done(function (data) {
-            jQuery('.cs-chat-container').removeClass('--open')
-            jQuery('.cs-chat-container').remove()
+                window.roomId = data.data.room_id
+                var password = data.data.sdk_user.password,
+                    sdkEmail = data.data.sdk_user.email
 
-            window.roomId = data.data.room_id
-            var password = data.data.sdk_user.password,
-                sdkEmail = data.data.sdk_user.email
+                QiscusSDK.core.init({
+                    AppId: appId,
+                    options: window.qiscusInitOptions
+                        ? Object.assign({}, defaultInitOptions, window.qiscusInitOptions)
+                        : defaultInitOptions,
+                })
 
-            QiscusSDK.core.init({
-                AppId: appId,
-                options: window.qiscusInitOptions
-                    ? Object.assign({}, defaultInitOptions, window.qiscusInitOptions)
-                    : defaultInitOptions,
-            })
-
-            QiscusSDK.core.setUser(sdkEmail, password, userName, 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png')
-            QiscusSDK.render()
-            QiscusSDK.core.UI.widgetButtonText = window.qismoWidgetButtonText
+                QiscusSDK.core.setUser(sdkEmail, password, userName, 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png')
+                QiscusSDK.render()
+                QiscusSDK.core.UI.widgetButtonText = window.qismoWidgetButtonText
+            });
         });
     }
     jQuery(function () {
