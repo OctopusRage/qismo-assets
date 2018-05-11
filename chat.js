@@ -68,8 +68,8 @@ jQuery(document).ready(function () {
                 }
             );
             initRoom.done(function (data) {
-                jQuery('.cs-chat-container').removeClass('--open')
-                jQuery('.cs-chat-container').remove()
+                jQuery('.qcw-cs-container').removeClass('--open')
+                jQuery('.qcw-cs-container').remove()
 
                 window.roomId = data.data.room_id
                 var sdkEmail = userId,
@@ -96,23 +96,23 @@ jQuery(document).ready(function () {
     jQuery(function () {
         // button form live chat
         if (screen.width > 768) {
-            jQuery('body').on('click', '.cs-trigger-button, .cs-close-chat', function () {
+            jQuery('body').on('click', '.qcw-cs-trigger-button, .qcw-cs-close', function () {
                 if (jQuery('.--open').length > 0) {
-                    jQuery('.cs-chat-container').removeClass('--open')
+                    jQuery('.qcw-cs-container').removeClass('--open')
                 } else {
-                    jQuery('.cs-chat-container').addClass('--open')
+                    jQuery('.qcw-cs-container').addClass('--open')
                 }
             })
         } else {
-            jQuery('body').on('click', '.cs-trigger-button, .cs-close-chat', function () {
+            jQuery('body').on('click', '.qcw-cs-trigger-button, .qcw-cs-close', function () {
                 if (jQuery('.--open').length > 0) {
-                    jQuery('.cs-chat-container').removeClass('--open')
+                    jQuery('.qcw-cs-container').removeClass('--open')
                     jQuery('body').removeClass('--modalOpen')
                     document.ontouchmove = function (event) {
 
                     }
                 } else {
-                    jQuery('.cs-chat-container').addClass('--open')
+                    jQuery('.qcw-cs-container').addClass('--open')
                     jQuery('body').addClass('--modalOpen')
                     document.ontouchmove = function (event) {
                         event.preventDefault();
@@ -148,30 +148,30 @@ jQuery(document).ready(function () {
         }
     }
     function attachLoginFormToDOM() {
-        var chatForm = jQuery('<div class="cs-chat-container">' +
-            '<div class="cs-chat-wrapper">' +
-            '<span class="cs-close-chat">&#x268A;</span>' +
-            '<div class="box-form">' +
+        var chatForm = jQuery('<div class="qcw-cs-container">' +
+            '<div class="qcw-cs-wrapper">' +
+            '<span class="qcw-cs-close">&#x268A;</span>' +
+            '<div class="qcw-cs-box-form">' +
             '<h3>' + window.qismoWelcomeText + '</h3>' +
             '<p>Please fill the details below before chatting with us</p>' +
             '<form>' +
-            '<div class="form-group">' +
-            '<input type="name" name="name" class="form-field" id="inputname" placeholder="Name">' +
+            '<div class="qcw-cs-form-group">' +
+            '<input type="name" name="name" class="qcw-cs-form-field" id="inputname" placeholder="Name">' +
             '</div>' +
-            '<div class="form-group">' +
-            '<input type="email" name="email" class="form-field" id="inputEmail" placeholder="Email">' +
+            '<div class="qcw-cs-form-group">' +
+            '<input type="email" name="email" class="qcw-cs-form-field" id="inputEmail" placeholder="Email">' +
             '</div>' +
-            '<div class="form-group">' +
-            '<button name="submitform" type="submit" class="cs-submit-form">Submit</button>' +
+            '<div class="qcw-cs-form-group">' +
+            '<button name="submitform" type="submit" class="qcw-cs-submit-form">Submit</button>' +
             '</div>' +
             '</form>' +
             '</div>' +
             '</div>' +
-            '<button type="button" class="cs-trigger-button">Talk To Us</button>' +
+            '<button type="button" class="qcw-cs-trigger-button">Talk To Us</button>' +
             '</div>')
         chatForm.prependTo('body');
 
-        jQuery('.cs-chat-wrapper form').on('submit', function (e) {
+        jQuery('.qcw-cs-wrapper form').on('submit', function (e) {
             e.preventDefault();
             var _self = jQuery(this),
                 submitBtn = jQuery('button[name="submitform"]'),
@@ -182,12 +182,12 @@ jQuery(document).ready(function () {
                 }
 
             if (!userData.user_id || !userData.user_name) {
-                if (jQuery('.form-group.error').length === 0) {
-                    jQuery('<div class="form-group error"><span>All fields are required!</span></div>').prependTo(_self);
+                if (jQuery('.qcw-cs-form-group.error').length === 0) {
+                    jQuery('<div class="qcw-cs-form-group error"><span>All fields are required!</span></div>').prependTo(_self);
                 }
                 return
             } else {
-                jQuery('.form-group.error').remove();
+                jQuery('.qcw-cs-form-group.error').remove();
             }
             submitBtn.attr('type', 'button')
             submitBtn.prop('disabled', '')
