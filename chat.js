@@ -72,8 +72,10 @@ jQuery(document).ready(function () {
                 jQuery('.cs-chat-container').remove()
 
                 window.roomId = data.data.room_id
-                var password = data.data.sdk_user.password,
-                    sdkEmail = data.data.sdk_user.email
+                var sdkEmail = userId,
+                    identityToken = data.data.identity_token
+                // var password = data.data.sdk_user.password,
+                //     sdkEmail = data.data.sdk_user.email
 
                 QiscusSDK.core.init({
                     AppId: appId,
@@ -82,7 +84,10 @@ jQuery(document).ready(function () {
                         : defaultInitOptions,
                 })
 
-                QiscusSDK.core.setUser(sdkEmail, password, userName, 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png')
+                QiscusSDK.core.verifyIdentityToken(identityToken).then(verifyResponse => {
+                    QiscusSDK.core.setUserWithIdentityToken(verifyResponse);
+                })
+                // QiscusSDK.core.setUser(sdkEmail, password, userName, 'https://d1edrlpyc25xu0.cloudfront.net/kiwari-prod/image/upload/wMWsDZP6ta/1516689726-ic_qiscus_client.png')
                 QiscusSDK.render()
                 QiscusSDK.core.UI.widgetButtonText = window.qismoWidgetButtonText
             });
